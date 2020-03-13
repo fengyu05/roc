@@ -5,6 +5,14 @@ Roc charting tools
 
 `pip install roc-tools`
 
+requirements
+
+`pip install matplotlib`
+`pip install future`
+
+On linux
+`sudo apt-get install python-tk`
+
 ## Usage
 `roc -h`
 
