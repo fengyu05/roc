@@ -437,13 +437,13 @@ def main():
     help='Start phrase. 0 : Group, 1 : Sort,  2 : Process')
 
   parser.add_argument('-d', '--delimiter', dest='delimiter', default='\x01',
-    help='CSV field delimiter.')
+    help='CSV field delimiter. Default is \\x01')
 
   parser.add_argument('-s', '--shard', dest='shardCount', default=64, type=int,
-    help='Shard count. Specify how many data point to generate for plotting.')
+    help='Shard count. Specify how many data point to generate for plotting. default is 64')
 
   parser.add_argument('-b', '--buffer', dest='bufferSize', default=32000, type=int,
-    help='bufferSize to use for sorting')
+    help='bufferSize to use for sorting, default is 32000')
 
   parser.add_argument('-v', '--verbose', action='store_true', help='Be verbose')
 
@@ -451,7 +451,7 @@ def main():
 
   parser.add_argument('-i', '--ignoreInvalid', action='store_true', help='Ignore invalid in thread')
 
-  parser.add_argument('-r', '--rate', type=float, dest='plotSizeRate', default=1.5, help='Chart size rate.')
+  parser.add_argument('-r', '--rate', type=float, dest='plotSizeRate', default=1.5, help='Chart size rate. default 1.5')
 
   parser.add_argument('--mask', dest='useMask', default='', help='mask certain data. Ex \'metric_nus*,metric_supply*\'. Will remove data collection label start with \'metric_nus and metric_supply\'')
 
