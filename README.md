@@ -12,5 +12,7 @@ Roc charting tools
 
 ## Inputfile format
 A CSV with four columns, defalut delimiter is `\x01`
+
+
 `Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label`
 
