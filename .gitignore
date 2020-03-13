@@ -1,3 +1,4 @@
 dist/
 roc.egg-info/
 roc_tools.egg-info/
+*.bak

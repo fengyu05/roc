@@ -3,6 +3,11 @@
 Generate ROC, PR and Correlation curves.
 Format of input: Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label)
 """
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import zip
+from past.utils import old_div
 __author__ = 'zhdeng'
 
 import sys, os, time
@@ -12,7 +17,7 @@ import uuid
 import heapq
 import numpy as np
 
-from optparse import OptionParser
+import argparse
 from collections import namedtuple
 from multiprocessing import Process, Pool
 from matplotlib import pyplot
@@ -26,7 +31,6 @@ RESULT_DIR = 'results'
 PHRASE_GROUP = 0
 PHRASE_SORT = 1
 PHRASE_PROCESS = 2
-options = dict()
 
 def openFile(file):
   """
@@ -100,13 +104,13 @@ def batchSort(input, output, key, bufferSize):
         os.remove(chunk.name)
       except Exception:
         pass
-  print "sorted file %s ready" % (output)
+  print("sorted file %s ready" % (output))
 
 def calculateAUC(rocPoints):
   AUC = 0.0
   lastPoint = (0, 0)
   for point in rocPoints:
-    AUC += (point[1] + lastPoint[1]) * (point[0] - lastPoint[0]) / 2
+    AUC += old_div((point[1] + lastPoint[1]) * (point[0] - lastPoint[0]), 2)
     lastPoint = point
   return AUC
 
@@ -155,17 +159,17 @@ def plotCurves(dataByModel):
   recallAx.set_title('Threshold score vs recall')
   recallAx.grid(True)
 
-  for (model, data) in dataByModel.items():
-    (recalls, precisions) = zip(*(data['PR']))
+  for (model, data) in list(dataByModel.items()):
+    (recalls, precisions) = list(zip(*(data['PR'])))
     prAx.plot(recalls, precisions, marker='o', linestyle='--', label=model)
 
-    (fallouts, recalls) = zip(*(data['ROC']))
+    (fallouts, recalls) = list(zip(*(data['ROC'])))
     rocAx.plot(fallouts, recalls, marker='o', linestyle='--', label=model)
 
-    (pCtrs, eCtrs) = zip(*(data['CORR']))
+    (pCtrs, eCtrs) = list(zip(*(data['CORR'])))
     corrAx.plot(pCtrs, eCtrs, label=model)
 
-    (score, recall, precision, fallout) = zip(*(data['cutoff']))
+    (score, recall, precision, fallout) = list(zip(*(data['cutoff'])))
 
     recallAx.plot(score, recall, label=model+'_recall')
     precisionAx.plot(score, precision, label=model+'_precision')
@@ -189,48 +193,48 @@ def plotCurves(dataByModel):
 
   pyplot.close()
   pngs = '{result}/pr_curve.png {result}/roc_curve.png {result}/corr_curve.png {result}/precision.png {result}/recall.png'.format(result=RESULT_DIR)
-  print 'png: ', pngs
+  print('png: ', pngs)
 
 def groupDataByModel(inputDir):
   """
   Group data to separated file by model.
   """
   t1 = time.time()
-  print "merging files by model to %s" % MERGE_DIR
+  print("merging files by model to %s" % MERGE_DIR)
   ensure_dir(MERGE_DIR)
   fileByModel = dict()
   for file in walktree(inputDir):
     for line in openFile(file):
-      fields = line.split(options.delimiter)
-      if options.ignoreInvalid:
+      fields = line.split(args.delimiter)
+      if args.ignoreInvalid:
         if len(fields) != 4 or fields[0] == '' or fields[1] == '' or fields[2] == '' or fields[3] == '':
-          print 'Ingonre Invalid line', fields
+          print('Ingonre Invalid line', fields)
           continue
       model = fields[0]
       if model not in fileByModel:
         fileByModel[model] = open('%s/%s.txt' % (MERGE_DIR, model), 'w')
       fileByModel[model].write(line)
-  for file in fileByModel.values():
+  for file in list(fileByModel.values()):
     file.close()
   t2 = time.time()
-  print "merging files take %ss" % (t2 - t1)
+  print("merging files take %ss" % (t2 - t1))
 
-  if options.useMask:
+  if args.useMask:
     fileByModel = removeMaskData(fileByModel)
   return fileByModel
 
 def removeMaskData(dataByName):
   toRemoveList = []
-  masks = options.useMask.split(',')
+  masks = args.useMask.split(',')
   for mask in masks:
-    for name in dataByName.iterkeys():
+    for name in dataByName.keys():
       if mask.endswith('*'):
         if name.startswith(mask[:-1]):
-          print 'remove %s because of filter:%s' % (name, mask)
+          print('remove %s because of filter:%s' % (name, mask))
           toRemoveList.append(name)
       else:
         if name == mask:
-          print 'remove %s because of filter:%s' % (name, mask)
+          print('remove %s because of filter:%s' % (name, mask))
           toRemoveList.append(name)
 
   for removeName in toRemoveList:
@@ -254,36 +258,36 @@ def sortDataFileByModel(fileByModel):
   Use external sort to sort data file by score column.
   """
   t1 = time.time()
-  print "sorting files...."
+  print("sorting files....")
   ensure_dir(SORT_DIR)
   processPool = []
-  for model in fileByModel.keys():
+  for model in list(fileByModel.keys()):
     mergedFile = '%s/%s.txt' % (MERGE_DIR, model)
     sortedFile = '%s/%s.txt' % (SORT_DIR, model)
-    if options.ignoreInvalid:
-      key = eval('lambda l: -float(l.split("' + options.delimiter + '")[2] or 0.0)')
+    if args.ignoreInvalid:
+      key = eval('lambda l: -float(l.split("' + args.delimiter + '")[2] or 0.0)')
     else:
-      key = eval('lambda l: -float(l.split("' + options.delimiter + '")[2])')
+      key = eval('lambda l: -float(l.split("' + args.delimiter + '")[2])')
     process = Process(target = batchSort,
-      args=(mergedFile, sortedFile, key, options.bufferSize))
+      args=(mergedFile, sortedFile, key, args.bufferSize))
     process.start()
     processPool.append(process)
 
   for process in processPool:
     process.join()
   t2 = time.time()
-  print "sorting files take %ss" % (t2 - t1)
+  print("sorting files take %ss" % (t2 - t1))
 
 def processDataByModel(fileByModel):
   """
   Process data by model. Wait all the subprocess finish then plot curves together.
   """
   t1 = time.time()
-  print "processing data...."
+  print("processing data....")
   pool = Pool(len(fileByModel))
   dataByModel = dict()
   resultList = []
-  for model in fileByModel.keys():
+  for model in list(fileByModel.keys()):
     sortedFile = '%s/%s.txt' % (SORT_DIR, model)
     result = pool.apply_async(processData, args=(model, sortedFile))
     resultList.append(result)
@@ -291,32 +295,32 @@ def processDataByModel(fileByModel):
     try:
       (model, data) = result.get()
       dataByModel[model] = data
-    except Exception, e:
-      if not options.ignoreInvalid:
+    except Exception as e:
+      if not args.ignoreInvalid:
         raise e
   t2 = time.time()
 
-  if options.aucSelect:
-    selectLimit = options.selectLimit
-    print 'Sort model by AUC and select top', selectLimit
-    sortedModelTuple = sorted(dataByModel.items(), key=lambda item: item[1]['AUC'], reverse=True)
+  if args.aucSelect:
+    selectLimit = args.selectLimit
+    print('Sort model by AUC and select top', selectLimit)
+    sortedModelTuple = sorted(list(dataByModel.items()), key=lambda item: item[1]['AUC'], reverse=True)
     dataByModel = dict(sortedModelTuple[:selectLimit])
 
-  if options.verbose:
-    print dataByModel
+  if args.verbose:
+    print(dataByModel)
   plotCurves(dataByModel)
-  print "processing data take %ss" % (t2 - t1)
+  print("processing data take %ss" % (t2 - t1))
   
 def processData(model, input):
   """
-  Process data. Bin data into options.shardCount bins. Accumulate data for each bin and populate necessary metrics. 
+  Process data. Bin data into args.shardCount bins. Accumulate data for each bin and populate necessary metrics. 
   """
-  print 'processData data for %s' % model
-  data = np.loadtxt(input, delimiter = options.delimiter,
+  print('processData data for %s' % model)
+  data = np.loadtxt(input, delimiter = args.delimiter,
     dtype = {'names' : ('model', 'weight', 'score', 'label'),
              'formats' : ('S16', 'f4', 'f4', 'i1')}) 
   dataSize = len(data)
-  shardSize = dataSize / options.shardCount
+  shardSize = old_div(dataSize, args.shardCount)
 
   rocPoints = [(0, 0)]
   prPoints = []
@@ -365,12 +369,12 @@ def processData(model, input):
       falsePositive += weight
 
     if partitionSize % shardSize == 0 or partitionSize == dataSize:
-      recall = truePositive / totalConditionPositive
-      fallout = falsePositive / totalConditionNegative;
-      precision = truePositive / (truePositive + falsePositive)
+      recall = old_div(truePositive, totalConditionPositive)
+      fallout = old_div(falsePositive, totalConditionNegative);
+      precision = old_div(truePositive, (truePositive + falsePositive))
 
-      meanPctr = binTotalScore / binWeight
-      eCtr = binPositive / binWeight
+      meanPctr = old_div(binTotalScore, binWeight)
+      eCtr = old_div(binPositive, binWeight)
 
       rocPoints += [(fallout, recall)]
       prPoints += [(recall, precision)]
@@ -387,30 +391,31 @@ def processData(model, input):
   cutoff = sorted(cutoff, key=lambda x:x[0])
 
   AUC = calculateAUC(rocPoints)
-  OER = truePositive / overallTatalScore  #Observed Expected Ratio
-  F1 = 2 * truePositive / (truePositive + falsePositive + totalConditionPositive)
+  OER = old_div(truePositive, overallTatalScore)  #Observed Expected Ratio
+  F1 = old_div(2 * truePositive, (truePositive + falsePositive + totalConditionPositive))
 
-  print '%s AUC: %f' % (model, AUC)
-  print '%s F1: %f' % (model, F1)
-  print '%s Observed/Expected Ratio: %f' % (model, OER)
-  if options.cutoff:
-    print '%s cutoff:' % model, cutoff
+  print('%s AUC: %f' % (model, AUC))
+  print('%s F1: %f' % (model, F1))
+  print('%s Observed/Expected Ratio: %f' % (model, OER))
+  if args.cutoff:
+    print('%s cutoff:' % model, cutoff)
 
   return model, { 'ROC': rocPoints, 'PR': prPoints, 'CORR': corrPoints, 'AUC': AUC, 'OER': OER, 'F1': F1, 'cutoff': cutoff}
 
 def configChart():
   cf = pylab.gcf()
   defaultSize = cf.get_size_inches()
-  plotSizeXRate = options.plotSizeRate
-  plotSizeYRate = options.plotSizeRate
+  plotSizeXRate = args.plotSizeRate
+  plotSizeYRate = args.plotSizeRate
   cf.set_size_inches( (defaultSize[0]*plotSizeXRate, defaultSize[1]*plotSizeYRate) )
 
 
-def roc(inputDir, phrase):
+def roc():
+  phrase = args.phrase
   if phrase == PHRASE_GROUP:
-    fileByModel = groupDataByModel(inputDir)
-    if options.verbose:
-      print fileByModel
+    fileByModel = groupDataByModel(args.inputDir)
+    if args.verbose:
+      print(fileByModel)
     phrase = PHRASE_GROUP + 1
   else:
     fileByModel = loadFileNameByModel(MERGE_DIR)
@@ -424,44 +429,39 @@ def roc(inputDir, phrase):
   processDataByModel(fileByModel)
 
 def main():
-  parser = OptionParser()
+  parser = argparse.ArgumentParser()
 
-  parser.add_option('-p', '--phrase', dest='phrase', default=0, type='int',
-    help='Start phrase. 0:Group, 1:Sort, 2:Process')
+  parser.add_argument('inputDir', help='Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label')
 
-  parser.add_option('-d', '--delimiter', dest='delimiter', default='\x01',
+  parser.add_argument('-p', '--phrase', dest='phrase', default=0, type=int,
+    help='Start phrase. 0 : Group, 1 : Sort,  2 : Process')
+
+  parser.add_argument('-d', '--delimiter', dest='delimiter', default='\x01',
     help='CSV field delimiter.')
 
-  parser.add_option('-s', '--shard', dest='shardCount', default=64, type='int',
+  parser.add_argument('-s', '--shard', dest='shardCount', default=64, type=int,
     help='Shard count. Specify how many data point to generate for plotting.')
 
-  parser.add_option('-b', '--buffer', dest='bufferSize', default=32000, type='int',
+  parser.add_argument('-b', '--buffer', dest='bufferSize', default=32000, type=int,
     help='bufferSize to use for sorting')
 
-  parser.add_option('-v', '--verbose', action='store_true', help='Be verbose')
+  parser.add_argument('-v', '--verbose', action='store_true', help='Be verbose')
 
-  parser.add_option('--cutoff', dest='cutoff', action='store_true', help='print cutoff')
+  parser.add_argument('--cutoff', dest='cutoff', action='store_true', help='print cutoff')
 
-  parser.add_option('-i', '--ignoreInvalid', action='store_true', help='Ignore invalid in thread')
+  parser.add_argument('-i', '--ignoreInvalid', action='store_true', help='Ignore invalid in thread')
 
-  parser.add_option('-r', '--rate', type='float', dest='plotSizeRate', default=1.5, help='Chart size rate.')
+  parser.add_argument('-r', '--rate', type=float, dest='plotSizeRate', default=1.5, help='Chart size rate.')
 
-  parser.add_option('--mask', dest='useMask', default='', help='mask certain data. Ex \'metric_nus*,metric_supply*\'. Will remove data collection label start with \'metric_nus and metric_supply\'')
+  parser.add_argument('--mask', dest='useMask', default='', help='mask certain data. Ex \'metric_nus*,metric_supply*\'. Will remove data collection label start with \'metric_nus and metric_supply\'')
 
-  parser.add_option('--aucSelect', dest='aucSelect', action='store_true', help='Select top n=selectLimit roc curve by roc AUC')
-  parser.add_option('--selectLimit', dest='selectLimit', default=0, type='int', help='Select top n model')
+  parser.add_argument('--aucSelect', dest='aucSelect', action='store_true', help='Select top n=selectLimit roc curve by roc AUC')
+  parser.add_argument('--selectLimit', dest='selectLimit', default=0, type=int, help='Select top n model')
 
-  (options,args) = parser.parse_args()
-  print options
-  print args
-
-  if len(args) < 1:
-    print 'roc.py inputDir'
-    print 'Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label'
-    parser.print_help()
-    exit()
-
-  roc(args[0], options.phrase)
+  global args
+  args = parser.parse_args()
+  print('Args:', args)
+  roc()
 
 if __name__ == '__main__':
     main()
