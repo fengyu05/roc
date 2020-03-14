@@ -145,7 +145,7 @@ You can change it with `> ulimit -n 10000`
 Sencod way to solve it.
 Make the merge sort buffer bigger, which will lead to less parallism thus less tmp files created.
 for example `--buffer 128000`
-
+ 
 
 
 
