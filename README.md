@@ -1,5 +1,8 @@
-# roc
-Roc charting tools
+# Roc charting tools
+Ploting ROC charts is not easy, which usually requires a MapReduce like data proccessing code.
+
+This tools is highly optimized and run on single machine super fast.
+For in example, in the brenchmark, it processed 1.1G compressed GZ data within 300s.
 
 ## Install
 
@@ -14,9 +17,43 @@ On linux
 `sudo apt-get install python-tk`
 
 ## Usage
-`roc -h`
 
 `roc inputfolder` or `roc inputfiles`
+
+```
+> roc -h
+usage: roc [-h] [-p PHRASE] [-d DELIMITER] [-s SHARDCOUNT] [-b BUFFERSIZE]
+           [-v] [--cutoff] [-i] [-r PLOTSIZERATE] [--mask USEMASK]
+           [--aucSelect] [--selectLimit SELECTLIMIT]
+           inputDir
+
+positional arguments:
+  inputDir              Input format: CSV by --delimiter: len(rocord)==4. Ex:
+                        modelId, weight, score, label
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PHRASE, --phrase PHRASE
+                        Start phrase. 0 : Group, 1 : Sort, 2 : Process
+  -d DELIMITER, --delimiter DELIMITER
+                        CSV field delimiter. Default is \x01
+  -s SHARDCOUNT, --shard SHARDCOUNT
+                        Shard count. Specify how many data point to generate
+                        for plotting. default is 64
+  -b BUFFERSIZE, --buffer BUFFERSIZE
+                        bufferSize to use for sorting, default is 32000
+  -v, --verbose         Be verbose
+  --cutoff              print cutoff
+  -i, --ignoreInvalid   Ignore invalid in thread
+  -r PLOTSIZERATE, --rate PLOTSIZERATE
+                        Chart size rate. default 1.5
+  --mask USEMASK        mask certain data. Ex 'metric_nus*,metric_supply*'.
+                        Will remove data collection label start with
+                        'metric_nus and metric_supply'
+  --aucSelect           Select top n=selectLimit roc curve by roc AUC
+  --selectLimit SELECTLIMIT
+                        Select top n model
+```
 
 ## Inputfile format
 A CSV with four columns, defalut delimiter is `\x01`
@@ -68,4 +105,23 @@ Let take a look at the result image.
 ![](images/pr_curve.png)
 ![](images/precision.png)
 ![](images/recall.png)
+
+## FAQ
+
+1. ```IOError: [Errno 24] Too many open files: '/tmp/```
+
+If you run it on a very large data, you may run into this issue. It's becaused the external merge sort create too many tmp file during the soring phrase.
+
+Two ways to solve it.
+
+First, turn up the file descriptor limit in your system, the default is usually 256.
+You can change it with `> ulimit -n 10000`
+
+Sencod way to solve it.
+Make the merge sort buffer bigger, which will lead to less parallism thus less tmp files created.
+for example `--buffer 128000`
+
+
+
+
 
