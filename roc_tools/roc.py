@@ -87,7 +87,7 @@ def batchSort(input, output, key, bufferSize):
             yield element.obj
 
     from itertools import islice
-    tempdir = '/tmp/' + str(uuid.uuid4())
+    tempdir = args.tempdir + str(uuid.uuid4())
     os.makedirs(tempdir)
     chunks = []
     try:
@@ -559,6 +559,13 @@ def main():
         default='',
         help=
         'mask certain data. Ex \'metric_nus*,metric_supply*\'. Will remove data collection label start with \'metric_nus and metric_supply\''
+    )
+
+    parser.add_argument(
+        '--tmp',
+        dest='tempdir',
+        default='/tmp/',
+        help= 'Tmp dir path'
     )
 
     parser.add_argument('--aucSelect',
