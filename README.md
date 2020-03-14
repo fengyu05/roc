@@ -2,7 +2,7 @@
 Ploting ROC charts is not easy, which usually requires a MapReduce like data proccessing code.
 
 This tools is highly optimized and run on single machine super fast.
-For in example, in the brenchmark, it processed 1.1G compressed GZ data within 300s.
+In the brenchmarking, it processed 1.1G compressed GZ data within 300 seconds on a `3.1 GHz Intel Core i7 Macbook pro`.
 
 ## Install
 
@@ -105,6 +105,9 @@ Let take a look at the result image.
 ![](images/pr_curve.png)
 ![](images/precision.png)
 ![](images/recall.png)
+
+
+
 
 ## FAQ
 
