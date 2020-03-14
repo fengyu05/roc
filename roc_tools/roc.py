@@ -552,8 +552,8 @@ def main():
                         '--rate',
                         type=float,
                         dest='plotSizeRate',
-                        default=1.5,
-                        help='Chart size rate. default 1.5')
+                        default=2,
+                        help='Chart size rate. default 2')
 
     parser.add_argument(
         '--mask',
