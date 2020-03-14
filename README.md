@@ -26,8 +26,10 @@ A CSV with four columns, defalut delimiter is `\x01`
 
 
 ## Exampe
+```
+> ~/workspace/roc (zf-dev)gzcat data/000001_0.gz | head
+```
 
-zf@NYC-M-ZDENG01 ~/workspace/roc (zf-dev)gzcat data/000001_0.gz | head
 ```
 channels_use_3_average_1\x011.0\x010.5278635621070862\x010
 channels_use_3_average_1\x011.0\x010.28971177339553833\x010
@@ -35,7 +37,7 @@ channels_use_3_average_1\x011.0\x010.31590744853019714\x010
 ```
 
 ```
-./roc_tools/roc.py --sample 0.1 data
+> roc --sample 0.1 data
 ```
 
 ```
@@ -53,5 +55,6 @@ channels_use_3_average_1 F1: 0.000157
 channels_use_3_average_1 Observed/Expected Ratio: 0.000232
 png:  results/pr_curve.png results/roc_curve.png results/corr_curve.png results/precision.png results/recall.png
 ```
+
 
 ...
