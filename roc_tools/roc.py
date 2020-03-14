@@ -87,7 +87,7 @@ def batchSort(input, output, key, bufferSize):
             yield element.obj
 
     from itertools import islice
-    tempdir = args.tempdir + str(uuid.uuid4())
+    tempdir = os.path.join(args.tempdir, str(uuid.uuid4()))
     os.makedirs(tempdir)
     chunks = []
     try:
@@ -208,32 +208,33 @@ def plotCurves(dataByModel):
     print('png: ', pngs)
 
 
-def groupDataByModel(inputDir):
+def groupDataByModel(inputDirs):
     """
-  Group data to separated file by model.
-  """
+    Group data to separated file by model.
+    """
     t1 = time.time()
     print("merging files by model to %s" % MERGE_DIR)
     ensure_dir(MERGE_DIR)
     fileByModel = dict()
     randomByModel = dict()
     totalLineMerged = 0
-    for file in walktree(inputDir):
-        for line in openFile(file):
-            fields = line.split(args.delimiter)
-            if args.ignoreInvalid:
-                if len(fields) != 4 or fields[0] == '' or fields[
-                        1] == '' or fields[2] == '' or fields[3] == '':
-                    print('Ingonre Invalid line', fields)
-                    continue
-            model = fields[0]
-            if model not in fileByModel:
-                fileByModel[model] = open('%s/%s.txt' % (MERGE_DIR, model), 'w')
-                randomByModel[model] = random.Random()
+    for inputDir in inputDirs:
+        for file in walktree(inputDir):
+            for line in openFile(file):
+                fields = line.split(args.delimiter)
+                if args.ignoreInvalid:
+                    if len(fields) != 4 or fields[0] == '' or fields[
+                            1] == '' or fields[2] == '' or fields[3] == '':
+                        print('Ingonre Invalid line', fields)
+                        continue
+                model = fields[0]
+                if model not in fileByModel:
+                    fileByModel[model] = open('%s/%s.txt' % (MERGE_DIR, model), 'w')
+                    randomByModel[model] = random.Random()
 
-            if args.sample >= 1.0 or randomByModel[model].random() < args.sample:
-                fileByModel[model].write(line)
-                totalLineMerged += 1
+                if args.sample >= 1.0 or randomByModel[model].random() < args.sample:
+                    fileByModel[model].write(line)
+                    totalLineMerged += 1
     for file in list(fileByModel.values()):
         file.close()
     t2 = time.time()
@@ -461,7 +462,7 @@ def loadProcessedDataByModel():
 def roc_proccess():
     phrase = args.phrase
     if phrase == PHRASE_GROUP:
-        fileByModel = groupDataByModel(args.inputDir)
+        fileByModel = groupDataByModel(args.inputDirs)
         if args.verbose:
             print(fileByModel)
         phrase = PHRASE_GROUP + 1
@@ -487,7 +488,8 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        'inputDir',
+        'inputDirs',
+        nargs='+',
         help=
         'Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label'
     )
