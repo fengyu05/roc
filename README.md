@@ -21,17 +21,17 @@ On linux
 
 ## Usage
 
-`roc inputfolder` or `roc inputfiles`
+`roc inputfolders` or `roc inputfiles...`
 
 ```
 > roc -h
 usage: roc [-h] [-p PHRASE] [-d DELIMITER] [-s SHARDCOUNT] [-b BUFFERSIZE]
            [-v] [--cutoff] [-i] [-r PLOTSIZERATE] [--mask USEMASK]
            [--aucSelect] [--selectLimit SELECTLIMIT]
-           inputDir
+           inputDirs
 
 positional arguments:
-  inputDir              Input format: CSV by --delimiter: len(rocord)==4. Ex:
+  inputDirs              Input format: CSV by --delimiter: len(rocord)==4. Ex:
                         modelId, weight, score, label
 
 optional arguments:
