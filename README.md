@@ -29,13 +29,13 @@ A CSV with four columns, defalut delimiter is `\x01`
 
 We have a 1G cvs data.
 ```
-> ~/workspace/roc (zf-dev)ls -lh data/000001_0.gz
+> ls -lh data/000001_0.gz
 -rw-r--r--  1 zf  staff   1.1G Mar 14 10:46 data/000001_0.gz
 ```
 
 Using the default CSV delimiter, `\x01`
 ```
-> ~/workspace/roc (zf-dev)gzcat data/000001_0.gz | head
+> gzcat data/000001_0.gz | head
 channels_use_3_average_1\x011.0\x010.5278635621070862\x010
 channels_use_3_average_1\x011.0\x010.28971177339553833\x010
 channels_use_3_average_1\x011.0\x010.31590744853019714\x010
