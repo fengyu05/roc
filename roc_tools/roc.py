@@ -7,29 +7,34 @@ from __future__ import division
 from __future__ import print_function
 from builtins import str
 from builtins import zip
-from past.utils import old_div
+
 __author__ = 'zhdeng'
 
 import sys, os, time
-os.environ["DISPLAY"] = ":0.0"
 import bz2, gzip
 import uuid
 import heapq
 import numpy as np
-
+import pickle
 import argparse
 from collections import namedtuple
 from multiprocessing import Process, Pool
 from matplotlib import pyplot
 import pylab
 
+os.environ["DISPLAY"] = ":0.0"
+
 MERGE_DIR = 'merges'
 SORT_DIR = 'sorts'
+PROCCESSED_DIR = 'proccessed'
+PROCCESSED_FILE = os.path.join(PROCCESSED_DIR, 'data.pickle')
 RESULT_DIR = 'results'
+
 
 PHRASE_GROUP = 0
 PHRASE_SORT = 1
 PHRASE_PROCESS = 2
+PHRASE_CHART = 3
 
 
 def openFile(file):
@@ -54,8 +59,8 @@ def ensure_dir(dirName):
 
 def walktree(input):
     """
-  Returns a list of file paths to traverse given input (a file or directory name)
-  """
+    Returns a list of file paths to traverse given input (a file or directory name)
+    """
     if os.path.isfile(input):
         return [input]
     else:
@@ -67,9 +72,9 @@ def walktree(input):
 
 def batchSort(input, output, key, bufferSize):
     """
-  External sort on file using merge sort.
-  See http://code.activestate.com/recipes/576755-sorting-big-files-the-python-26-way/
-  """
+    External sort on file using merge sort.
+    See http://code.activestate.com/recipes/576755-sorting-big-files-the-python-26-way/
+    """
     def merge(key=None, *iterables):
         if key is None:
             keyed_iterables = iterables
@@ -115,8 +120,7 @@ def calculateAUC(rocPoints):
     AUC = 0.0
     lastPoint = (0, 0)
     for point in rocPoints:
-        AUC += old_div((point[1] + lastPoint[1]) * (point[0] - lastPoint[0]),
-                       2)
+        AUC += (point[1] + lastPoint[1]) * (point[0] - lastPoint[0]) / 2.0
         lastPoint = point
     return AUC
 
@@ -296,8 +300,8 @@ def sortDataFileByModel(fileByModel):
 
 def processDataByModel(fileByModel):
     """
-  Process data by model. Wait all the subprocess finish then plot curves together.
-  """
+    Process data by model. Wait all the subprocess finish then plot curves together.
+    """
     t1 = time.time()
     print("processing data....")
     pool = Pool(len(fileByModel))
@@ -326,7 +330,10 @@ def processDataByModel(fileByModel):
 
     if args.verbose:
         print(dataByModel)
-    plotCurves(dataByModel)
+
+    ensure_dir(PROCCESSED_DIR)
+    pickle.dump(dataByModel, open(PROCCESSED_FILE, 'wb'))
+    return dataByModel
     print("processing data take %ss" % (t2 - t1))
 
 
@@ -342,7 +349,7 @@ def processData(model, input):
                           'formats': ('S16', 'f4', 'f4', 'i1')
                       })
     dataSize = len(data)
-    shardSize = old_div(dataSize, args.shardCount)
+    shardSize = int(dataSize / args.shardCount)
 
     rocPoints = [(0, 0)]
     prPoints = []
@@ -391,12 +398,12 @@ def processData(model, input):
             falsePositive += weight
 
         if partitionSize % shardSize == 0 or partitionSize == dataSize:
-            recall = old_div(truePositive, totalConditionPositive)
-            fallout = old_div(falsePositive, totalConditionNegative)
-            precision = old_div(truePositive, (truePositive + falsePositive))
+            recall = truePositive / totalConditionPositive
+            fallout = falsePositive / totalConditionNegative
+            precision = truePositive / (truePositive + falsePositive)
 
-            meanPctr = old_div(binTotalScore, binWeight)
-            eCtr = old_div(binPositive, binWeight)
+            meanPctr = binTotalScore / binWeight
+            eCtr = binPositive / binWeight
 
             rocPoints += [(fallout, recall)]
             prPoints += [(recall, precision)]
@@ -413,9 +420,8 @@ def processData(model, input):
     cutoff = sorted(cutoff, key=lambda x: x[0])
 
     AUC = calculateAUC(rocPoints)
-    OER = old_div(truePositive, overallTatalScore)  #Observed Expected Ratio
-    F1 = old_div(2 * truePositive,
-                 (truePositive + falsePositive + totalConditionPositive))
+    OER = truePositive / overallTatalScore  #Observed Expected Ratio
+    F1 = 2 * truePositive / (truePositive + falsePositive + totalConditionPositive)
 
     print('%s AUC: %f' % (model, AUC))
     print('%s F1: %f' % (model, F1))
@@ -442,6 +448,8 @@ def configChart():
     cf.set_size_inches(
         (defaultSize[0] * plotSizeXRate, defaultSize[1] * plotSizeYRate))
 
+def loadProcessedDataByModel():
+    return pickle.load(open(PROCCESSED_FILE, 'rb'))
 
 def roc():
     phrase = args.phrase
@@ -459,7 +467,13 @@ def roc():
     else:
         fileByModel = loadFileNameByModel(SORT_DIR)
 
-    processDataByModel(fileByModel)
+    if phrase == PHRASE_PROCESS:
+        dataByModel = processDataByModel(fileByModel)
+        phrase = PHRASE_PROCESS + 1
+    else:
+        dataByModel = loadProcessedDataByModel()
+
+    plotCurves(dataByModel)
 
 
 def main():
@@ -476,7 +490,7 @@ def main():
                         dest='phrase',
                         default=0,
                         type=int,
-                        help='Start phrase. 0 : Group, 1 : Sort,  2 : Process')
+                        help='Start phrase. 0 : Group, 1 : Sort,  2 : Process, 3 : Chart')
 
     parser.add_argument('-d',
                         '--delimiter',
