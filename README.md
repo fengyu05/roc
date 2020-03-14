@@ -10,7 +10,10 @@ In the brenchmarking, it processed 1.1G compressed GZ data within 300 seconds on
 
 requirements
 
+For ploting support
 `pip install matplotlib`
+
+For python2/3 compatiable
 `pip install future`
 
 On linux
