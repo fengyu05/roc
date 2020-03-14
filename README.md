@@ -68,5 +68,4 @@ Let take a look at the result image.
 ![](images/pr_curve.png)
 ![](images/precision.png)
 ![](images/recall.png)
-![](images/corr_curve.png)
 
