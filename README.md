@@ -62,5 +62,11 @@ channels_use_3_average_1 Observed/Expected Ratio: 0.000232
 png:  results/pr_curve.png results/roc_curve.png results/corr_curve.png results/precision.png results/recall.png
 ```
 
+Let take a look at the result image.
 
-...
+![](images/roc_curve.png)
+![](images/pr_curve.png)
+![](images/precision.png)
+![](images/recall.png)
+![](images/corr_curve.png)
+
