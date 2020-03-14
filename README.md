@@ -112,10 +112,10 @@ Let take a look at the result image.
 ## Resume from failure from phrase checkpoint
 
 The roc command breakdown the process to 4 phrases.
-1. Merge data, group and merge records by model
-2. Sort data, sort records by model
-3. Proccess, computing roc data
-4. Plot, ploting the charts
+0. Merge data, group and merge records by model
+1. Sort data, sort records by model
+2. Proccess, computing roc data
+3. Plot, ploting the charts
 
 If your command failed at certain phrase, you can restart it and change the arguments.
 
@@ -123,6 +123,12 @@ For example, if you sort filed, because of limit of file descriptor (See FAQ #1)
 You can resume the job with the below command and add argument to change the buffer.
 ```
 roc <your-data> -p 1 --buffer 64000
+```
+
+Also you can use the phrase argument to re-chart with different scale ratio.
+
+```
+roc <your-data> -p 3 -r 2.0
 ```
 
 ## FAQ
