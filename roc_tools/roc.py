@@ -8,7 +8,7 @@ from __future__ import print_function
 from builtins import str
 from builtins import zip
 
-__author__ = 'zhdeng'
+__author__ = 'zf'
 
 import sys, os, time
 import bz2, gzip
@@ -16,6 +16,7 @@ import uuid
 import heapq
 import numpy as np
 import pickle
+import random
 import argparse
 from collections import namedtuple
 from multiprocessing import Process, Pool
@@ -215,6 +216,8 @@ def groupDataByModel(inputDir):
     print("merging files by model to %s" % MERGE_DIR)
     ensure_dir(MERGE_DIR)
     fileByModel = dict()
+    randomByModel = dict()
+    totalLineMerged = 0
     for file in walktree(inputDir):
         for line in openFile(file):
             fields = line.split(args.delimiter)
@@ -225,12 +228,16 @@ def groupDataByModel(inputDir):
                     continue
             model = fields[0]
             if model not in fileByModel:
-                fileByModel[model] = open('%s/%s.txt' % (MERGE_DIR, model),
-                                          'w')
-            fileByModel[model].write(line)
+                fileByModel[model] = open('%s/%s.txt' % (MERGE_DIR, model), 'w')
+                randomByModel[model] = random.Random()
+
+            if args.sample >= 1.0 or randomByModel[model].random() < args.sample:
+                fileByModel[model].write(line)
+                totalLineMerged += 1
     for file in list(fileByModel.values()):
         file.close()
     t2 = time.time()
+    print('Total line proccessed {}'.format(totalLineMerged))
     print("merging files take %ss" % (t2 - t1))
 
     if args.useMask:
@@ -451,7 +458,7 @@ def configChart():
 def loadProcessedDataByModel():
     return pickle.load(open(PROCCESSED_FILE, 'rb'))
 
-def roc():
+def roc_proccess():
     phrase = args.phrase
     if phrase == PHRASE_GROUP:
         fileByModel = groupDataByModel(args.inputDir)
@@ -508,6 +515,15 @@ def main():
         'Shard count. Specify how many data point to generate for plotting. default is 64'
     )
 
+    parser.add_argument(
+        '--sample',
+        dest='sample',
+        default=1.0,
+        type=float,
+        help=
+        'Record sample rate. Specify how much percentage of records to keep per model.'
+    )
+
     parser.add_argument('-b',
                         '--buffer',
                         dest='bufferSize',
@@ -558,7 +574,7 @@ def main():
     global args
     args = parser.parse_args()
     print('Args:', args)
-    roc()
+    roc_proccess()
 
 
 if __name__ == '__main__':
