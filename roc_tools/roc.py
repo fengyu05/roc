@@ -141,7 +141,7 @@ def plotCurves(dataByModel):
     rocFigure = pyplot.figure()
     configChart()
     rocAx = rocFigure.add_subplot(111)
-    rocAx.set_xlabel('Fallout')
+    rocAx.set_xlabel('Fallout / FPR')
     rocAx.set_ylabel('Recall')
     rocAx.set_title('ROC Curve')
     rocAx.grid(True)
@@ -149,8 +149,8 @@ def plotCurves(dataByModel):
     corrFigure = pyplot.figure()
     configChart()
     corrAx = corrFigure.add_subplot(111)
-    corrAx.set_xlabel('pCtr')
-    corrAx.set_ylabel('eCtr')
+    corrAx.set_xlabel('predict score')
+    corrAx.set_ylabel('real score')
     corrAx.set_title('Correlation Curve')
     corrAx.grid(True)
 
@@ -158,7 +158,7 @@ def plotCurves(dataByModel):
     configChart()
     precisionAx = precisionFigure.add_subplot(111)
     precisionAx.set_xlabel('score')
-    precisionAx.set_ylabel('rate')
+    precisionAx.set_ylabel('Precision')
     precisionAx.set_title('Threshold score vs precision')
     precisionAx.grid(True)
 
@@ -166,9 +166,17 @@ def plotCurves(dataByModel):
     configChart()
     recallAx = recallFigure.add_subplot(111)
     recallAx.set_xlabel('score')
-    recallAx.set_ylabel('rate')
+    recallAx.set_ylabel('Recall')
     recallAx.set_title('Threshold score vs recall')
     recallAx.grid(True)
+
+    falloutFigure = pyplot.figure()
+    configChart()
+    falloutAx = recallFigure.add_subplot(111)
+    falloutAx.set_xlabel('score')
+    falloutAx.set_ylabel('Fallout (False Positive Rate)')
+    falloutAx.set_title('Threshold score vs fallout')
+    falloutAx.grid(True)
 
     for (model, data) in list(dataByModel.items()):
         (recalls, precisions) = list(zip(*(data['PR'])))
@@ -190,16 +198,16 @@ def plotCurves(dataByModel):
     prAx.legend(loc='upper right', shadow=True)
     prFigure.savefig('%s/pr_curve.png' % RESULT_DIR)
 
-    rocAx.legend(loc='upper right', shadow=True)
+    rocAx.legend(loc='lower right', shadow=True)
     rocFigure.savefig('%s/roc_curve.png' % RESULT_DIR)
 
-    corrAx.legend(loc='upper center', shadow=True)
+    corrAx.legend(loc='upper left', shadow=True)
     corrFigure.savefig('%s/corr_curve.png' % RESULT_DIR)
 
-    precisionAx.legend(loc='upper center', shadow=True)
+    precisionAx.legend(loc='upper left', shadow=True)
     precisionFigure.savefig('%s/precision.png' % RESULT_DIR)
 
-    recallAx.legend(loc='upper center', shadow=True)
+    recallAx.legend(loc='lower left', shadow=True)
     recallFigure.savefig('%s/recall.png' % RESULT_DIR)
 
     pyplot.close()
@@ -511,10 +519,10 @@ def main():
         '-s',
         '--shard',
         dest='shardCount',
-        default=64,
+        default=128,
         type=int,
         help=
-        'Shard count. Specify how many data point to generate for plotting. default is 64'
+        'Shard count. Specify how many data point to generate for plotting. default is 128'
     )
 
     parser.add_argument(
