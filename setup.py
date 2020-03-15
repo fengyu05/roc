@@ -2,7 +2,7 @@ from setuptools import setup, find_packages  # Always prefer setuptools over dis
 
 setup(
     name='roc-tools',
-    version='0.1.4',
+    version='0.1.5',
     description='Roc charting tools',
     url='https://github.com/fengyu05/roc',
     author='fengyu05',

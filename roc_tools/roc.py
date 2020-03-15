@@ -417,8 +417,8 @@ def processData(model, input):
             falsePositive += weight
 
         if partitionSize % shardSize == 0 or partitionSize == dataSize:
-            recall = truePositive / totalConditionPositive
-            fallout = falsePositive / totalConditionNegative
+            recall = truePositive / totalConditionPositive if totalConditionPositive > 0 else 0.0
+            fallout = falsePositive / totalConditionNegative if totalConditionPositive > 0 else 0.0
             precision = truePositive / (truePositive + falsePositive)
 
             meanPctr = binTotalScore / binWeight
