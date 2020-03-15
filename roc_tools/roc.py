@@ -172,7 +172,7 @@ def plotCurves(dataByModel):
 
     falloutFigure = pyplot.figure()
     configChart()
-    falloutAx = recallFigure.add_subplot(111)
+    falloutAx = falloutFigure.add_subplot(111)
     falloutAx.set_xlabel('score')
     falloutAx.set_ylabel('Fallout (False Positive Rate)')
     falloutAx.set_title('Threshold score vs fallout')
@@ -192,6 +192,7 @@ def plotCurves(dataByModel):
 
         recallAx.plot(score, recall, label=model + '_recall')
         precisionAx.plot(score, precision, label=model + '_precision')
+        falloutAx.plot(score, fallout, label=model + '_fallout')
 
     # saving figures
     ensure_dir(RESULT_DIR)
@@ -210,9 +211,11 @@ def plotCurves(dataByModel):
     recallAx.legend(loc='lower left', shadow=True)
     recallFigure.savefig('%s/recall.png' % RESULT_DIR)
 
+    falloutAx.legend(loc='upper right', shadow=True)
+    falloutFigure.savefig('%s/fallout.png' % RESULT_DIR)
+
     pyplot.close()
-    pngs = '{result}/pr_curve.png {result}/roc_curve.png {result}/corr_curve.png {result}/precision.png {result}/recall.png'.format(
-        result=RESULT_DIR)
+    pngs = '{result}/pr_curve.png {result}/roc_curve.png {result}/corr_curve.png {result}/precision.png {result}/recall.png {result}/fallout.png'.format(result=RESULT_DIR)
     print('png: ', pngs)
 
 
