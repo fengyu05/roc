@@ -2,8 +2,16 @@ from setuptools import setup, find_packages  # Always prefer setuptools over dis
 
 setup(
     name='roc-tools',
-    version='0.2.1',
+    version='0.2.2',
     description='Roc charting tools',
+    long_description='''
+        Compute and ploting ROC charts is not easy, which usually requires a MapReduce like data proccessing code.
+        This tools is highly optimized and run on single machine super fast. In the brenchmarking, it processed 1.1G compressed GZ data within 300 seconds on a 3.1 GHz Intel Core i7 Macbook pro.
+
+        It provides both CLI and python interface.
+
+        More details see https://github.com/fengyu05/roc.
+    ''',
     url='https://github.com/fengyu05/roc',
     author='fengyu05',
     author_email='fengyu05@gmail.com',
