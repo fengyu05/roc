@@ -37,6 +37,7 @@ PHRASE_PROCESS = 2
 PHRASE_CHART = 3
 
 DEFAULT_SAMPLE = 1.0
+DEFAULT_SHART_COUNT = 100
 DEFAULT_BUFFER_SIZE = 32000
 DEFAULT_PLOT_SIZE_RATE = 2
 DEFAULT_TEMPDIR = '/tmp/'
@@ -60,7 +61,7 @@ def ensure_dir(dirName):
     if not os.path.exists(dirName):
         os.makedirs(dirName)
 
-def batchSort(self, input, output, key, bufferSize, tempdir):
+def batchSort(self, input, output, key, buffer_size, tempdir):
     """
     External sort on file using merge sort.
     See http://code.activestate.com/recipes/576755-sorting-big-files-the-python-26-way/
@@ -82,7 +83,7 @@ def batchSort(self, input, output, key, bufferSize, tempdir):
         with open(input, 'rb', 64 * 1024) as inputFile:
             inputIter = iter(inputFile)
             while True:
-                current_chunk = list(islice(inputIter, bufferSize))
+                current_chunk = list(islice(inputIter, buffer_size))
                 if not current_chunk:
                     break
                 current_chunk.sort(key=key)
@@ -121,16 +122,17 @@ def walktree(input):
 class ROC(object):
     def __init__(self,
             args=None, # ArgumentParser args object, override all the below args if set
-            inputDirs = '',
+            input_dirs = '',
             phrase = 0,
             sample = DEFAULT_SAMPLE,
-            bufferSize = DEFAULT_BUFFER_SIZE,
-            plotSizeRate = DEFAULT_PLOT_SIZE_RATE,
-            ignoreInvalid = False,
-            useMask = '',
+            shard_count = DEFAULT_SHART_COUNT,
+            buffer_size = DEFAULT_BUFFER_SIZE,
+            plot_size_rate = DEFAULT_PLOT_SIZE_RATE,
+            ignore_invalid = False,
+            use_mask = '',
             tempdir = DEFAULT_TEMPDIR,
-            aucSelect = False,
-            selectLimit = 0,
+            auc_select = False,
+            select_limit = 0,
             verbose = False,
             print_cutoff = False,
             no_plot = False,
@@ -138,16 +140,16 @@ class ROC(object):
     ):
         self.args = args
 
-        self.inputDirs = args.inputDirs if args else inputDirs
+        self.input_dirs = args.input_dirs if args else input_dirs
         self.phrase = args.phrase if args else phrase
-        self.shardCount = args.shardCount if args else shardCount
+        self.shard_count = args.shard_count if args else shard_count
         self.sample = args.sample if args else sample
-        self.bufferSize = args.bufferSize if args else bufferSize
-        self.plotSizeRate = args.plotSizeRate if args else plotSizeRate
-        self.ignoreInvalid = args.ignoreInvalid if args else ignoreInvalid
-        self.useMask = args.useMask if args else useMask
-        self.aucSelect = args.aucSelect if args else aucSelect
-        self.selectLimit = args.selectLimit if args else selectLimit
+        self.buffer_size = args.buffer_size if args else buffer_size
+        self.plot_size_rate = args.plot_size_rate if args else plot_size_rate
+        self.ignore_invalid = args.ignore_invalid if args else ignore_invalid
+        self.use_mask = args.use_mask if args else use_mask
+        self.auc_select = args.auc_select if args else auc_select
+        self.select_limit = args.select_limit if args else select_limit
         self.verbose = args.verbose if args else verbose
         self.print_cutoff = args.print_cutoff if args else print_cutoff
         self.tempdir = args.tempdir if args else tempdir
@@ -257,7 +259,7 @@ class ROC(object):
         print('png: ', pngs)
 
 
-    def groupDataByModel(self, inputDirs):
+    def groupDataByModel(self, input_dirs):
         """
         Group data to separated file by model.
         """
@@ -267,11 +269,11 @@ class ROC(object):
         fileByModel = dict()
         randomByModel = dict()
         totalLineMerged = 0
-        for inputDir in inputDirs:
+        for inputDir in input_dirs:
             for file in walktree(inputDir):
                 for line in openFile(file):
                     fields = line.split(self.delimiter)
-                    if self.ignoreInvalid:
+                    if self.ignore_invalid:
                         if len(fields) != 4 or fields[0] == '' or fields[
                                 1] == '' or fields[2] == '' or fields[3] == '':
                             print('Ingonre Invalid line', fields)
@@ -290,14 +292,14 @@ class ROC(object):
         print('Total line proccessed {}'.format(totalLineMerged))
         print("merging files take %ss" % (t2 - t1))
 
-        if self.useMask:
+        if self.use_mask:
             fileByModel = self.removeMaskData(fileByModel)
         return fileByModel
 
 
     def removeMaskData(self, dataByName):
         toRemoveList = []
-        masks = self.useMask.split(',')
+        masks = self.use_mask.split(',')
         for mask in masks:
             for name in dataByName.keys():
                 if mask.endswith('*'):
@@ -338,13 +340,13 @@ class ROC(object):
         for model in list(fileByModel.keys()):
             mergedFile = '%s/%s.txt' % (MERGE_DIR, model)
             sortedFile = '%s/%s.txt' % (SORT_DIR, model)
-            if self.ignoreInvalid:
+            if self.ignore_invalid:
                 key = eval('lambda l: -float(l.split("' + self.delimiter +
                            '")[2] or 0.0)')
             else:
                 key = eval('lambda l: -float(l.split("' + self.delimiter +
                            '")[2])')
-            process = Process(target=batchSort, args=(mergedFile, sortedFile, key, self.bufferSize))
+            process = Process(target=batchSort, args=(mergedFile, sortedFile, key, self.buffer_size))
             process.start()
             processPool.append(process)
 
@@ -365,24 +367,24 @@ class ROC(object):
         resultList = []
         for model in list(fileByModel.keys()):
             sortedFile = '%s/%s.txt' % (SORT_DIR, model)
-            result = pool.apply_async(self.computeMetrics, args=(model, sortedFile, self.shardCount, self.delimiter, self.print_cutoff))
+            result = pool.apply_async(self.computeMetrics, args=(model, sortedFile, self.shard_count, self.delimiter, self.print_cutoff))
             resultList.append(result)
         for result in resultList:
             try:
                 (model, data) = result.get()
                 dataByModel[model] = data
             except Exception as e:
-                if not self.ignoreInvalid:
+                if not self.ignore_invalid:
                     raise e
         t2 = time.time()
 
-        if self.aucSelect:
-            selectLimit = self.selectLimit
-            print('Sort model by AUC and select top', selectLimit)
+        if self.auc_select:
+            select_limit = self.select_limit
+            print('Sort model by AUC and select top', select_limit)
             sortedModelTuple = sorted(list(dataByModel.items()),
                                       key=lambda item: item[1]['AUC'],
                                       reverse=True)
-            dataByModel = dict(sortedModelTuple[:selectLimit])
+            dataByModel = dict(sortedModelTuple[:select_limit])
 
         if self.verbose:
             print(dataByModel)
@@ -394,9 +396,9 @@ class ROC(object):
 
 
     @staticmethod
-    def computeMetrics(model, input, shardCount, delimiter, print_cutoff=False):
+    def computeMetrics(model, input, shard_count, delimiter, print_cutoff=False):
         """
-        Process data. Bin data into shardCount bins. Accumulate data for each bin and populate necessary metrics. 
+        Process data. Bin data into shard_count bins. Accumulate data for each bin and populate necessary metrics. 
         """
         print('compute metrics for %s' % model)
         data = np.loadtxt(input,
@@ -406,7 +408,7 @@ class ROC(object):
                               'formats': ('S16', 'f4', 'f4', 'i1')
                           })
         dataSize = len(data)
-        shardSize = int(dataSize / shardCount)
+        shardSize = int(dataSize / shard_count)
 
         rocPoints = [(0, 0)]
         prPoints = []
@@ -500,8 +502,8 @@ class ROC(object):
     def configChart(self):
         cf = pylab.gcf()
         defaultSize = cf.get_size_inches()
-        plotSizeXRate = self.plotSizeRate
-        plotSizeYRate = self.plotSizeRate
+        plotSizeXRate = self.plot_size_rate
+        plotSizeYRate = self.plot_size_rate
         cf.set_size_inches(
             (defaultSize[0] * plotSizeXRate, defaultSize[1] * plotSizeYRate))
 
@@ -511,7 +513,7 @@ class ROC(object):
     def process(self):
         phrase = self.phrase
         if phrase == PHRASE_GROUP:
-            fileByModel = self.groupDataByModel(self.inputDirs)
+            fileByModel = self.groupDataByModel(self.input_dirs)
             if self.verbose:
                 print(fileByModel)
             phrase = PHRASE_GROUP + 1
@@ -532,13 +534,14 @@ class ROC(object):
 
         if not self.no_plot:
             self.plotCurves(dataByModel)
+        return dataByModel
 
 
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        'inputDirs',
+        'input_dirs',
         nargs='+',
         help=
         'Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label'
@@ -560,11 +563,11 @@ def main():
     parser.add_argument(
         '-s',
         '--shard',
-        dest='shardCount',
-        default=128,
+        dest='shard_count',
+        default=DEFAULT_SHART_COUNT,
         type=int,
         help=
-        'Shard count. Specify how many data point to generate for plotting. default is 128'
+        'Shard count. Specify how many data point to generate for plotting. default is 100'
     )
 
     parser.add_argument(
@@ -578,27 +581,27 @@ def main():
 
     parser.add_argument('-b',
                         '--buffer',
-                        dest='bufferSize',
+                        dest='buffer_size',
                         default=DEFAULT_BUFFER_SIZE,
                         type=int,
-                        help='bufferSize to use for sorting, default is 32000')
+                        help='buffer_size to use for sorting, default is 32000')
 
 
     parser.add_argument('-i',
-                        '--ignoreInvalid',
+                        '--ignore_invalid',
                         action='store_true',
                         help='Ignore invalid in thread')
 
     parser.add_argument('-r',
                         '--rate',
                         type=float,
-                        dest='plotSizeRate',
+                        dest='plot_size_rate',
                         default=DEFAULT_PLOT_SIZE_RATE,
                         help='Chart size rate. default 2')
 
     parser.add_argument(
         '--mask',
-        dest='useMask',
+        dest='use_mask',
         default='',
         help=
         'mask certain data. Ex \'metric_nus*,metric_supply*\'. Will remove data collection label start with \'metric_nus and metric_supply\''
@@ -611,13 +614,13 @@ def main():
         help= 'Tmp dir path'
     )
 
-    parser.add_argument('--aucSelect',
-                        dest='aucSelect',
+    parser.add_argument('--auc_select',
+                        dest='auc_select',
                         action='store_true',
-                        help='Select top n=selectLimit roc curve by roc AUC')
+                        help='Select top n=select_limit roc curve by roc AUC')
 
-    parser.add_argument('--selectLimit',
-                        dest='selectLimit',
+    parser.add_argument('--select_limit',
+                        dest='select_limit',
                         default=0,
                         type=int,
                         help='Select top n model')
