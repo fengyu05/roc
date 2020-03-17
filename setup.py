@@ -2,7 +2,7 @@ from setuptools import setup, find_packages  # Always prefer setuptools over dis
 
 setup(
     name='roc-tools',
-    version='0.2.2',
+    version='0.2.3',
     description='Roc charting tools',
     long_description='''
         Compute and ploting ROC charts is not easy, which usually requires a MapReduce like data proccessing code.

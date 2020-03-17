@@ -1,7 +1,6 @@
 #!/usr/bin/python
 """
-Generate ROC, PR and Correlation curves.
-Format of input: Input format: CSV by --delimiter: len(rocord)==4. Ex: modelId, weight, score, label)
+Generate ROC, PR, Correlation and score to Recall/Pricision/Fallout curves.
 """
 from __future__ import division
 from __future__ import print_function
@@ -41,6 +40,7 @@ DEFAULT_SHART_COUNT = 100
 DEFAULT_BUFFER_SIZE = 32000
 DEFAULT_PLOT_SIZE_RATE = 2
 DEFAULT_TEMPDIR = '/tmp/'
+DEFAULT_DELIMTER = '\x01'
 
 def openFile(file):
     """
@@ -128,6 +128,7 @@ class ROC(object):
             shard_count = DEFAULT_SHART_COUNT,
             buffer_size = DEFAULT_BUFFER_SIZE,
             plot_size_rate = DEFAULT_PLOT_SIZE_RATE,
+            delimiter = DEFAULT_DELIMTER,
             ignore_invalid = False,
             use_mask = '',
             tempdir = DEFAULT_TEMPDIR,
@@ -146,6 +147,7 @@ class ROC(object):
         self.sample = args.sample if args else sample
         self.buffer_size = args.buffer_size if args else buffer_size
         self.plot_size_rate = args.plot_size_rate if args else plot_size_rate
+        self.delimiter = args.delimiter if args else delimiter
         self.ignore_invalid = args.ignore_invalid if args else ignore_invalid
         self.use_mask = args.use_mask if args else use_mask
         self.auc_select = args.auc_select if args else auc_select
@@ -557,7 +559,7 @@ def main():
     parser.add_argument('-d',
                         '--delimiter',
                         dest='delimiter',
-                        default='\x01',
+                        default=DEFAULT_DELIMTER,
                         help='CSV field delimiter. Default is \\x01')
 
     parser.add_argument(
