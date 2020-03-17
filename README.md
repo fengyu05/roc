@@ -25,37 +25,45 @@ On linux
 
 ```
 > roc -h
-usage: roc [-h] [-p PHRASE] [-d DELIMITER] [-s SHARDCOUNT] [-b BUFFERSIZE]
-           [-v] [--cutoff] [-i] [-r PLOTSIZERATE] [--mask USEMASK]
-           [--aucSelect] [--selectLimit SELECTLIMIT]
-           inputDirs
+usage: roc [-h] [-p PHRASE] [-d DELIMITER] [-s SHARD_COUNT] [--sample SAMPLE]
+           [-b BUFFER_SIZE] [-i] [-r PLOT_SIZE_RATE] [--mask USE_MASK]
+           [--tmp TEMPDIR] [--auc_select] [--select_limit SELECT_LIMIT] [-v]
+           [--print-cutoff] [--no-plot] [--output-dir OUTPUT_DIR]
+           input_dirs [input_dirs ...]
 
 positional arguments:
-  inputDirs              Input format: CSV by --delimiter: len(rocord)==4. Ex:
+  input_dirs            Input format: CSV by --delimiter: len(rocord)==4. Ex:
                         modelId, weight, score, label
 
 optional arguments:
   -h, --help            show this help message and exit
   -p PHRASE, --phrase PHRASE
-                        Start phrase. 0 : Group, 1 : Sort, 2 : Process
+                        Start phrase. 0 : Group, 1 : Sort, 2 : Process, 3 :
+                        Chart
   -d DELIMITER, --delimiter DELIMITER
                         CSV field delimiter. Default is \x01
-  -s SHARDCOUNT, --shard SHARDCOUNT
+  -s SHARD_COUNT, --shard SHARD_COUNT
                         Shard count. Specify how many data point to generate
-                        for plotting. default is 64
-  -b BUFFERSIZE, --buffer BUFFERSIZE
-                        bufferSize to use for sorting, default is 32000
-  -v, --verbose         Be verbose
-  --cutoff              print cutoff
-  -i, --ignoreInvalid   Ignore invalid in thread
-  -r PLOTSIZERATE, --rate PLOTSIZERATE
-                        Chart size rate. default 1.5
-  --mask USEMASK        mask certain data. Ex 'metric_nus*,metric_supply*'.
+                        for plotting. default is 100
+  --sample SAMPLE       Record sample rate. Specify how much percentage of
+                        records to keep per model.
+  -b BUFFER_SIZE, --buffer BUFFER_SIZE
+                        buffer_size to use for sorting, default is 32000
+  -i, --ignore_invalid  Ignore invalid in thread
+  -r PLOT_SIZE_RATE, --rate PLOT_SIZE_RATE
+                        Chart size rate. default 2
+  --mask USE_MASK       mask certain data. Ex 'metric_nus*,metric_supply*'.
                         Will remove data collection label start with
                         'metric_nus and metric_supply'
-  --aucSelect           Select top n=selectLimit roc curve by roc AUC
-  --selectLimit SELECTLIMIT
+  --tmp TEMPDIR         Tmp dir path
+  --auc_select          Select top n=select_limit roc curve by roc AUC
+  --select_limit SELECT_LIMIT
                         Select top n model
+  -v, --verbose         Be verbose
+  --print-cutoff        print cutoff
+  --no-plot             do not plot
+  --output-dir OUTPUT_DIR
+                        output data file
 ```
 
 ## Inputfile format
@@ -87,7 +95,7 @@ Let generate the ROC with 10% of data.
 ```
 
 ```
-Args: Namespace(aucSelect=False, bufferSize=32000, cutoff=False, delimiter='\x01', ignoreInvalid=False, inputDir='data', phrase=0, plotSizeRate=1.5, sample=0.1, selectLimit=0, shardCount=64, useMask='', verbose=False)
+Args: Namespace(auc_select=False, buffer_size=32000, delimiter='\x01', ignore_invalid=False, input_dirs=['data'], no_plot=False, output_dir='results', phrase=0, plot_size_rate=2, print_cutoff=False, sample=0.1, select_limit=0, shard_count=100, tempdir='/tmp/', use_mask='', verbose=False)
 merging files by model to merges
 Total line proccessed 12011651
 merging files take 287.450480938s
@@ -130,6 +138,23 @@ Also you can use the phrase argument to re-chart with different scale ratio.
 ```
 roc <your-data> -p 3 -r 2.0
 ```
+
+## Use it as a Python lib
+
+E.g
+```
+from roc_tools.roc import ROC
+    roc = ROC(
+        input_dirs = ...,
+        sample = 0.3,
+        buffer_size = 64000,
+        tempdir = '/mnt/tmp/'
+        print_cutoff = True,
+        output_dir = ...,
+    )
+```
+
+Parameters of ROC class is same as the CLI params.
 
 ## FAQ
 
