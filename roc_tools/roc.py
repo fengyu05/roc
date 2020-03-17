@@ -4,8 +4,6 @@ Generate ROC, PR, Correlation and score to Recall/Pricision/Fallout curves.
 """
 from __future__ import division
 from __future__ import print_function
-from builtins import str
-from builtins import zip
 
 __author__ = 'zf'
 
@@ -104,6 +102,108 @@ def batchSort(input, output, key, buffer_size, tempdir):
             except Exception:
                 pass
     print("sorted file %s ready" % (output))
+
+def computeMetrics(model, input, shard_count, delimiter, print_cutoff=False):
+    """
+    Process data. Bin data into shard_count bins. Accumulate data for each bin and populate necessary metrics. 
+    """
+    print('compute metrics for %s' % model)
+    data = np.loadtxt(input,
+                      delimiter=delimiter,
+                      dtype={
+                          'names': ('model', 'weight', 'score', 'label'),
+                          'formats': ('S16', 'f4', 'f4', 'i1')
+                      })
+    dataSize = len(data)
+    shardSize = int(dataSize / shard_count)
+
+    rocPoints = [(0, 0)]
+    prPoints = []
+    corrPoints = []
+    cutoff = []
+
+    totalConditionPositive = 0.0
+    totalConditionNegative = 0.0
+
+    for record in data:
+        modelId = record[0]
+        weight = record[1]
+        score = record[2]
+        label = record[3]
+
+        if label == 1:
+            totalConditionPositive += weight
+        elif label == 0:
+            totalConditionNegative += weight
+        else:
+            assert False, 'label invalid: %d' % label
+
+    truePositive = 0.0
+    falsePositive = 0.0
+    binTotalScore = 0.0
+    binWeight = 0.0
+    binPositive = 0.0
+    overallTatalScore = 0.0
+
+    partitionSize = 0
+    for record in data:
+        modelId = record[0]
+        weight = record[1]
+        score = record[2]
+        label = record[3]
+
+        partitionSize += 1
+        binWeight += weight
+        overallTatalScore += weight * score
+
+        if label == 1:
+            truePositive += weight
+            binPositive += weight
+            binTotalScore += score * weight
+        elif label == 0:
+            falsePositive += weight
+
+        if partitionSize % shardSize == 0 or partitionSize == dataSize:
+            recall = (truePositive / totalConditionPositive) if totalConditionPositive > 0 else 0.0
+            fallout = (falsePositive / totalConditionNegative) if totalConditionPositive > 0 else 0.0
+            precision = truePositive / (truePositive + falsePositive)
+
+            meanPctr = binTotalScore / binWeight
+            eCtr = binPositive / binWeight
+
+            rocPoints += [(fallout, recall)]
+            prPoints += [(recall, precision)]
+            corrPoints += [(eCtr, meanPctr)]
+            cutoff += [(score, recall, precision, fallout)]
+
+            binWeight = 0.0
+            binTotalScore = 0.0
+            binPositive = 0.0
+
+    rocPoints = sorted(rocPoints, key=lambda x: x[0])
+    prPoints = sorted(prPoints, key=lambda x: x[0])
+    corrPoints = sorted(corrPoints, key=lambda x: x[0])
+    cutoff = sorted(cutoff, key=lambda x: x[0])
+
+    AUC = self.calculateAUC(rocPoints)
+    OER = truePositive / overallTatalScore  #Observed Expected Ratio
+    F1 = 2 * truePositive / (truePositive + falsePositive + totalConditionPositive)
+
+    print('%s AUC: %f' % (model, AUC))
+    print('%s F1: %f' % (model, F1))
+    print('%s Observed/Expected Ratio: %f' % (model, OER))
+    if print_cutoff:
+        print('%s cutoff:' % model, cutoff)
+
+    return model, {
+        'ROC': rocPoints,
+        'PR': prPoints,
+        'CORR': corrPoints,
+        'AUC': AUC,
+        'OER': OER,
+        'F1': F1,
+        'cutoff': cutoff
+    }
 
 def walktree(input):
     """
@@ -369,7 +469,7 @@ class ROC(object):
         resultList = []
         for model in list(fileByModel.keys()):
             sortedFile = '%s/%s.txt' % (SORT_DIR, model)
-            result = pool.apply_async(self.computeMetrics, args=(model, sortedFile, self.shard_count, self.delimiter, self.print_cutoff))
+            result = pool.apply_async(computeMetrics, args=(model, sortedFile, self.shard_count, self.delimiter, self.print_cutoff))
             resultList.append(result)
         for result in resultList:
             try:
@@ -397,108 +497,6 @@ class ROC(object):
         return dataByModel
 
 
-    @staticmethod
-    def computeMetrics(model, input, shard_count, delimiter, print_cutoff=False):
-        """
-        Process data. Bin data into shard_count bins. Accumulate data for each bin and populate necessary metrics. 
-        """
-        print('compute metrics for %s' % model)
-        data = np.loadtxt(input,
-                          delimiter=delimiter,
-                          dtype={
-                              'names': ('model', 'weight', 'score', 'label'),
-                              'formats': ('S16', 'f4', 'f4', 'i1')
-                          })
-        dataSize = len(data)
-        shardSize = int(dataSize / shard_count)
-
-        rocPoints = [(0, 0)]
-        prPoints = []
-        corrPoints = []
-        cutoff = []
-
-        totalConditionPositive = 0.0
-        totalConditionNegative = 0.0
-
-        for record in data:
-            modelId = record[0]
-            weight = record[1]
-            score = record[2]
-            label = record[3]
-
-            if label == 1:
-                totalConditionPositive += weight
-            elif label == 0:
-                totalConditionNegative += weight
-            else:
-                assert False, 'label invalid: %d' % label
-
-        truePositive = 0.0
-        falsePositive = 0.0
-        binTotalScore = 0.0
-        binWeight = 0.0
-        binPositive = 0.0
-        overallTatalScore = 0.0
-
-        partitionSize = 0
-        for record in data:
-            modelId = record[0]
-            weight = record[1]
-            score = record[2]
-            label = record[3]
-
-            partitionSize += 1
-            binWeight += weight
-            overallTatalScore += weight * score
-
-            if label == 1:
-                truePositive += weight
-                binPositive += weight
-                binTotalScore += score * weight
-            elif label == 0:
-                falsePositive += weight
-
-            if partitionSize % shardSize == 0 or partitionSize == dataSize:
-                recall = (truePositive / totalConditionPositive) if totalConditionPositive > 0 else 0.0
-                fallout = (falsePositive / totalConditionNegative) if totalConditionPositive > 0 else 0.0
-                precision = truePositive / (truePositive + falsePositive)
-
-                meanPctr = binTotalScore / binWeight
-                eCtr = binPositive / binWeight
-
-                rocPoints += [(fallout, recall)]
-                prPoints += [(recall, precision)]
-                corrPoints += [(eCtr, meanPctr)]
-                cutoff += [(score, recall, precision, fallout)]
-
-                binWeight = 0.0
-                binTotalScore = 0.0
-                binPositive = 0.0
-
-        rocPoints = sorted(rocPoints, key=lambda x: x[0])
-        prPoints = sorted(prPoints, key=lambda x: x[0])
-        corrPoints = sorted(corrPoints, key=lambda x: x[0])
-        cutoff = sorted(cutoff, key=lambda x: x[0])
-
-        AUC = self.calculateAUC(rocPoints)
-        OER = truePositive / overallTatalScore  #Observed Expected Ratio
-        F1 = 2 * truePositive / (truePositive + falsePositive + totalConditionPositive)
-
-        print('%s AUC: %f' % (model, AUC))
-        print('%s F1: %f' % (model, F1))
-        print('%s Observed/Expected Ratio: %f' % (model, OER))
-        if print_cutoff:
-            print('%s cutoff:' % model, cutoff)
-
-        return model, {
-            'ROC': rocPoints,
-            'PR': prPoints,
-            'CORR': corrPoints,
-            'AUC': AUC,
-            'OER': OER,
-            'F1': F1,
-            'cutoff': cutoff
-        }
 
 
     def configChart(self):
