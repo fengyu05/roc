@@ -61,7 +61,7 @@ def ensure_dir(dirName):
     if not os.path.exists(dirName):
         os.makedirs(dirName)
 
-def batchSort(self, input, output, key, buffer_size, tempdir):
+def batchSort(input, output, key, buffer_size, tempdir):
     """
     External sort on file using merge sort.
     See http://code.activestate.com/recipes/576755-sorting-big-files-the-python-26-way/
@@ -348,7 +348,7 @@ class ROC(object):
             else:
                 key = eval('lambda l: -float(l.split("' + self.delimiter +
                            '")[2])')
-            process = Process(target=batchSort, args=(mergedFile, sortedFile, key, self.buffer_size))
+            process = Process(target=batchSort, args=(mergedFile, sortedFile, key, self.buffer_size, self.tempdir))
             process.start()
             processPool.append(process)
 
