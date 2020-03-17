@@ -185,7 +185,15 @@ def computeMetrics(model, input, shard_count, delimiter, print_cutoff=False):
     corrPoints = sorted(corrPoints, key=lambda x: x[0])
     cutoff = sorted(cutoff, key=lambda x: x[0])
 
-    AUC = self.calculateAUC(rocPoints)
+    def calculateAUC(rocPoints):
+        AUC = 0.0
+        lastPoint = (0, 0)
+        for point in rocPoints:
+            AUC += (point[1] + lastPoint[1]) * (point[0] - lastPoint[0]) / 2.0
+            lastPoint = point
+        return AUC
+
+    AUC = calculateAUC(rocPoints)
     OER = truePositive / overallTatalScore  #Observed Expected Ratio
     F1 = 2 * truePositive / (truePositive + falsePositive + totalConditionPositive)
 
@@ -258,15 +266,6 @@ class ROC(object):
         self.no_plot = args.no_plot if args else no_plot
         self.output_dir = args.output_dir if args else output_dir
 
-
-    @staticmethod
-    def calculateAUC(rocPoints):
-        AUC = 0.0
-        lastPoint = (0, 0)
-        for point in rocPoints:
-            AUC += (point[1] + lastPoint[1]) * (point[0] - lastPoint[0]) / 2.0
-            lastPoint = point
-        return AUC
 
     def plotCurves(self, dataByModel):
         """
