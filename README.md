@@ -143,7 +143,7 @@ roc <your-data> -p 3 -r 2.0
 
 E.g
 ```
-from roc_tools.roc import ROC
+    from roc_tools.roc import ROC
     roc = ROC(
         input_dirs = ...,
         sample = 0.3,
